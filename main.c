@@ -1,9 +1,9 @@
 #include <C_8051F340.h>
 #include <Einstellungen.h>
 
-
-
-//--- Ports ---
+//-------------//
+//--- Ports ---//
+//-------------//
 
 sbit button0 = 0x80; //Vorheriger Raum
 sbit button1 = 0x81; //Licht toggeln
@@ -23,9 +23,9 @@ sfr button = 0x80; //Port0
 sfr led = 0x90; //Port1
 sfr segments = 0xB0; //Port3
 
-
-
-//--- Variablen ---
+//-----------------//
+//--- Variablen ---//
+//-----------------//
 
 //Status des Lichtes für jeden Raum
 //0=Aus; 1=An
@@ -45,9 +45,9 @@ unsigned char segmentDigit[] = {0b00111111, 0b00000111, 0b01011011, 0b01001111, 
 //Es gibt Raum 0 bis 8
 char room = 0;
 
-
-
-//--- Funktionen ---
+//------------------//
+//--- Funktionen ---//
+//------------------//
 
 //Aktualisiert die LED Anzeige für die Lichter
 void updateLights() {
