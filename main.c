@@ -23,6 +23,9 @@ sfr button = 0x80; //Port0
 sfr led = 0x90; //Port1
 sfr segments = 0xB0; //Port3
 
+sbit seg0 = 0xA4; //port 2.4
+sbit seg1 = 0xA5; //Port 2.5
+
 //-----------------//
 //--- Variablen ---//
 //-----------------//
@@ -39,7 +42,7 @@ char shutterStatus[] = {0, 0, 0, 0, 0, 0, 0, 0};
 //0=Aus; 1=An
 char autoStatus[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-unsigned char segmentDigit[] = {0b00111111, 0b00000111, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
+unsigned char segmentDigit[] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
 
 //Zeigt auf welchen Raum gerade Zugegriffen wird
 //Es gibt Raum 0 bis 8
@@ -51,14 +54,14 @@ char room = 0;
 
 //Aktualisiert die LED Anzeige für die Lichter
 void updateLights() {
-    led0 = lightStatus[0];
-    led1 = lightStatus[1];
-    led2 = lightStatus[2];
-    led3 = lightStatus[3];
-    led4 = lightStatus[4];
-    led5 = lightStatus[5];
-    led6 = lightStatus[6];
-    led7 = lightStatus[7];
+    led0 = lightStatus[7];
+    led1 = lightStatus[6];
+    led2 = lightStatus[5];
+    led3 = lightStatus[4];
+    led4 = lightStatus[3];
+    led5 = lightStatus[2];
+    led6 = lightStatus[1];
+    led7 = lightStatus[0];
 }
 
 //Aktualisiert die 7-Segment Anzeige
@@ -68,18 +71,27 @@ void updateDisplay() {
 
 //Initialisiert alle Timer und Interrupts und startet Timer0
 void initialize() {
+    seg0 = 1;
+    seg1 = 0;
     Grundeinstellungen();
 }
 
 //Üperbrüft ob ein weiterer Raum zur Verfügung steht, wechselt auf den
 //Raum und läd die Raumeigenschaften für die physische Ausgabe
-//incement: -1=Decrement 1=Increment (Angabe von Differenz)
-void nextRoom(char increment) {
-    if(increment > 0 && room < 8) {
-        room ++;
-    } else if(increment < 0 && room > 0) {
+void incrementRoom() {
+    if(room < 7) {
+        room++;
+    }
+    updateLights();
+    
+}
+
+//Üperbrüft ob ein weiterer Raum zur Verfügung steht, wechselt auf den
+//Raum und läd die Raumeigenschaften für die physische Ausgabe
+void decrementRoom() {
+    if(room > 0) {
         room--;
-	}
+    }
     updateLights();
 }
 
@@ -107,12 +119,17 @@ void moveShutter(char status, char full, char room) {
 void main() {
     initialize();
     while(1) {
+    updateLights();
+    updateDisplay();
         if(!button3) {
-            nextRoom(-1);
+            decrementRoom();
             while(!button3) continue;
         } else if(!button0) {
-            nextRoom(1);
+            incrementRoom();
             while(!button0) continue;
+        } else if(!button2) {
+            setLight(2, room);
+            while(!button2) continue;
         }
     }
 }
