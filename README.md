@@ -1,6 +1,6 @@
 # LichtprojektHGS
 
-## Projektmiglieder:
+## Projektmitglieder:
 
 André, Adorjan, Darien
 
