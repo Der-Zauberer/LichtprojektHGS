@@ -5,7 +5,7 @@
 //--- Ports ---//
 //-------------//
 
-sbit PREROOM = 0x80; //Vorheriger Raum P0.0
+sbit PREVROOM = 0x80; //Vorheriger Raum P0.0
 sbit TOGGLELIGHT = 0x81; //Licht toggeln P0.1
 sbit AUTOMODE = 0x82; //Automatikmodius toggeln P0.2
 sbit NEXTROOM = 0x83; //Naechster Raum P0.3
@@ -41,19 +41,20 @@ char lightStatus[] = {0, 0, 0, 0, 0, 0, 0, 0};
 //Status des Rolladens
 char shutterStatus = 0;
 
-//Zählt von 0 bis 8 fuer den Index von ENGINE
+//Zählt von 0 bis 7 fuer den Index von engine[]
 char shutterIndex = 0;
 
-//Enthält daten für den Schrittmotor
+//Enthält die Zustände für den Schrittmotor
 int engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b00000100, 0b00001100, 0b00001000, 0b00001001};
 
 int SHUTTERSTATUSMIN = 0;
 int SHUTTERSTATUSMAX = 1000;
 
-//Status der automatischen Steuerung fuer jeden Raum
+//Status der automatischen Steuerung
 //0=Aus; 1=An
-char autoStatus[] = {0, 0, 0, 0, 0, 0, 0, 0};
+char autoStatus = 0;
 
+//Enthält die Zustände für die Sieben-Segment-Anzeige
 unsigned char segmentDigit[] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
 
 //Zeigt auf welchen Raum gerade Zugegriffen wird
@@ -86,37 +87,39 @@ void updateDisplay() {
 //Initialisiert alle Timer und Interrupts und startet Timer0
 void initialize() {
     Grundeinstellungen();
-    SEG0 = 1;
-    SEG1 = 0;
-    TMOD = 0b00000001;
+    SEG0 = 1; //Setzt die Anzeige aus Segment0
+    SEG1 = 0; //Setzt die Anzeige aus Segment0
+    TMOD = 0b00000001; //Timer0 16-Bit
 }
 
+//Wartet 50 Millisekunden
 void wait50Millis() {
-    TH0 = 0xFC;
-    TL0 = 0x18;
-    TR0 = 1;
+    TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+    TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+    TR0 = 1; //Timer starten
     while (!TF0) continue;
-    TR0 = 0;
-    TF0 = 0;
+    TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
+    TR0 = 0; //Timer stoppen
 }
 
+//Wartet 2 Sekunden
 void wait2Secs() {
-    TH0 = 0x3C;
-    TL0 = 0xB0;
-    TR0 = 1;
-    for(i = 0; i < 20000; i++) {
-        TH0 = 0x3C;
-        TL0 = 0xB0;
-        while (!TF0) continue;
+    TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+    TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+    TR0 = 1; //Timer starten
+    for (i = 0; i < 40; i++) { //40 Durchgänge, da 40 * 50ms = 2000ms = 2s
+        while (!TF0) continue; //Warten, bis ein Durchgang fertig ist
+        TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
+        TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+        TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
     }
-    TR0 = 0;
-    TF0 = 0;
+    TR0 = 0; //Timer stoppen
 }
 
 //Ueperbrueft ob ein weiterer Raum zur Verfuegung steht, wechselt auf den
 //Raum und laed die Raumeigenschaften fuer die physische Ausgabe
 void incrementRoom() {
-    if(room < 7) {
+    if (room < 7) {
         room++;
     }
     updateLights();
@@ -126,7 +129,7 @@ void incrementRoom() {
 //Ueperbrueft ob ein weiterer Raum zur Verfuegung steht, wechselt auf den
 //Raum und laed die Raumeigenschaften fuer die physische Ausgabe
 void decrementRoom() {
-    if(room > 0) {
+    if (room > 0) {
         room--;
     }
     updateLights();
@@ -136,100 +139,97 @@ void decrementRoom() {
 //status: 0=Zu; 1=Auf; 2=Invertieren
 //room: Der Raum fuer den das Licht gesetzt werden soll
 void setLight(char status, char room) {
-    if(status == 0 || status == 1) {
+    if (status == 0 || status == 1) {
         lightStatus[room] = status;
-    } else if(status == 2) {
+    } else if (status == 2) {
         lightStatus[room] = !lightStatus[room];
     }
     updateLights();
 }
 
-//Bewegt den Servomotor auf die gewuenschte Position
-//room: Der Raum fuer den der Rolladen bewegt werden soll
-void moveShutterUp() {
-    wait2Secs();
-    if(!SHUTTERUP) {
-        while (!SHUTTERUP) {
+//Bewegt den Schrittmotor um einen Schritt
+//up: 0=Herunter; 1=Hoch
+//return: Gibt an, ob sich der Motor weiter bewegen lässt 0=Nein; 1=Ja
+int stepShutter(char up) {
+    if (up == 1) {
+        if (shutterStatus < SHUTTERSTATUSMAX) {
             if (shutterIndex < 7) {
                 shutterIndex++;
             } else {
                 shutterIndex = 0;
             }
             ENGINE = engine[shutterIndex];
-            wait50Millis();
+            shutterStatus++;
+        } else {
+            return 0;
         }
     } else {
-        while(shutterStatus != SHUTTERSTATUSMAX) {
-            if(!SHUTTERUP) {
-                ENGINE = 0;
-                while(!SHUTTERUP) continue;
-                break;
-            }
-            if (shutterIndex < 7) {
-                shutterIndex++;
+         if (shutterStatus > SHUTTERSTATUSMIN) {
+            if (shutterIndex > 0) {
+                shutterIndex--;
             } else {
-                shutterIndex = 0;
+                shutterIndex = 7;
             }
             ENGINE = engine[shutterIndex];
-            wait50Millis();
+            shutterStatus--;
+        } else {
+            return 0;
         }
     }
-    ENGINE = 0;
+    return 1;
 }
 
-//Bewegt den Servomotor auf die gewuenschte Position
-//room: Der Raum fuer den der Rolladen bewegt werden soll
-void moveShutterDown() {
+//Bewegt den Schrittmotor auf die gewuenschte Position
+//up: 0=Herunter; 1=Hoch
+void moveShutter(char up) {
     wait2Secs();
-    if(!SHUTTERDOWN) {
-        while (!SHUTTERDOWN) {
-            if (shutterIndex > 0) {
-                shutterIndex--;
-            } else {
-                shutterIndex = 7;
-            }
-            ENGINE = engine[shutterIndex];
+    if (SHUTTERUP && SHUTTERDOWN) {
+        while(SHUTTERDOWN && SHUTTERUP && stepShutter(up) == 1) {
             wait50Millis();
+        }
+        return;
+    }
+    if (up == 1) {
+        if (!SHUTTERUP) {
+            while (!SHUTTERUP && stepShutter(up) == 1) {
+                wait50Millis();
+            }
+            return;
         }
     } else {
-        while(shutterStatus != SHUTTERSTATUSMIN) {
-            if(!SHUTTERDOWN) {
-                ENGINE = 0;
-                while(!SHUTTERUP) continue;
-                break;
+        if (!SHUTTERDOWN) {
+            while (!SHUTTERDOWN && stepShutter(up) == 1) {
+                wait50Millis();
             }
-            if (shutterIndex > 0) {
-                shutterIndex--;
-            } else {
-                shutterIndex = 7;
-            }
-            ENGINE = engine[shutterIndex];
-            wait50Millis();
+            return;
         }
     }
-    ENGINE = 0;
 }
 
 //Main-Funktion fuer die Ueberpruefung der Taster
 void main() {
     initialize();
-    while(1) {
-    updateLights();
-    updateDisplay();
-        if(!NEXTROOM) {
+    while (1) {
+        updateLights();
+        updateDisplay();
+        //Naechster Raum
+        if (!NEXTROOM) {
             decrementRoom();
-            while(!NEXTROOM) continue;
-        } else if(!PREROOM) {
+            while (!NEXTROOM) continue;
+        //Vorheriger Raum
+        } else if (!PREVROOM) {
             incrementRoom();
-            while(!PREROOM) continue;
-        } else if(!AUTOMODE) {
+            while (!PREVROOM) continue;
+        //Automatikmodus
+        } else if (!AUTOMODE) {
             setLight(2, room);
-            while(!AUTOMODE) continue;
-        } else if(!SHUTTERUP) {
-            moveShutterUp();
-        } else if(!SHUTTERDOWN) {
-            moveShutterDown();
+            while (!AUTOMODE) continue;
+        //Rolladen Hoch
+        } else if (!SHUTTERUP) {
+            moveShutter(1);
+        //Rolladen Herunter
+        } else if (!SHUTTERDOWN) {
+            moveShutter(0);
         }
     }
 }
-
