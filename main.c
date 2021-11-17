@@ -41,10 +41,10 @@ char lightStatus[] = {0, 0, 0, 0, 0, 0, 0, 0};
 //Status des Rolladens
 char shutterStatus = 0;
 
-//Zählt von 0 bis 7 fuer den Index von engine[]
+//Zaehlt von 0 bis 7 fuer den Index von engine[]
 char shutterIndex = 0;
 
-//Enthält die Zustände für den Schrittmotor
+//Enthaelt die Zustände für den Schrittmotor
 int engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b00000100, 0b00001100, 0b00001000, 0b00001001};
 
 int SHUTTERSTATUSMIN = 0;
@@ -54,7 +54,7 @@ int SHUTTERSTATUSMAX = 1000;
 //0=Aus; 1=An
 char autoStatus = 0;
 
-//Enthält die Zustände für die Sieben-Segment-Anzeige
+//Enthält die Zustaende für die Sieben-Segment-Anzeige
 unsigned char segmentDigit[] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
 
 //Zeigt auf welchen Raum gerade Zugegriffen wird
