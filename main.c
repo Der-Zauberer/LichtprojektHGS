@@ -5,13 +5,13 @@
 //--- Ports ---//
 //-------------//
 
-sbit PREVROOM = 0x80; //Vorheriger Raum P0.0
-sbit TOGGLELIGHT = 0x81; //Licht toggeln P0.1
-sbit AUTOMODE = 0x82; //Automatikmodius toggeln P0.2
-sbit NEXTROOM = 0x83; //Naechster Raum P0.3
+sbit PREV_ROOM = 0x80; //Vorheriger Raum P0.0
+sbit TOGGLE_LIGHT = 0x81; //Licht toggeln P0.1
+sbit AUTO_MODE = 0x82; //Automatikmodius toggeln P0.2
+sbit NEXT_ROOM = 0x83; //Naechster Raum P0.3
 
-sbit SHUTTERUP = 0xA0; //Rolladen hoch P2.0
-sbit SHUTTERDOWN = 0xA1; //Rolladen runter P2.1
+sbit SHUTTER_UP = 0xA0; //Rolladen hoch P2.0
+sbit SHUTTER_DOWN = 0xA1; //Rolladen runter P2.1
 
 sbit LED0 = 0x90;
 sbit LED1 = 0x91;
@@ -45,10 +45,10 @@ int shutterStatus = 0;
 char shutterIndex = 0;
 
 //Enthaelt die Zustände für den Schrittmotor
-char engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b00000100, 0b00001100, 0b00001000, 0b00001001};
+unsigned char engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b00000100, 0b00001100, 0b00001000, 0b00001001};
 
-char SHUTTERSTATUSMIN = 0;
-int SHUTTERSTATUSMAX = 2048;
+char SHUTTER_STATUS_MIN = 0;
+int SHUTTER_STATUS_MAX = 2048;
 
 //Status der automatischen Steuerung
 //0=Aus; 1=An
@@ -152,7 +152,7 @@ void setLight(char status, char room) {
 //return: Gibt an, ob sich der Motor weiter bewegen lässt 0=Nein; 1=Ja
 int stepShutter(char up) {
     if (up == 1) {
-        if (shutterStatus < (SHUTTERSTATUSMAX * 4)) {
+        if (shutterStatus < (SHUTTER_STATUS_MAX * 4)) {
             if (shutterIndex < 8) {
                 shutterIndex++;
             } else {
@@ -164,7 +164,7 @@ int stepShutter(char up) {
             return 0;
         }
     } else {
-         if (shutterStatus > SHUTTERSTATUSMIN) {
+         if (shutterStatus > SHUTTER_STATUS_MIN) {
             if (shutterIndex > 0) {
                 shutterIndex--;
             } else {
@@ -183,24 +183,24 @@ int stepShutter(char up) {
 //up: 0=Herunter; 1=Hoch
 void moveShutter(char up) {
     wait500Millis();
-    if (SHUTTERUP && SHUTTERDOWN) {
-        while(SHUTTERDOWN && SHUTTERUP && stepShutter(up) == 1) {
+    if (SHUTTER_UP && SHUTTER_DOWN) {
+        while(SHUTTER_DOWN && SHUTTER_UP && stepShutter(up) == 1) {
             wait500Mycros();
         }
         ENGINE = 0;
         return;
     }
     if (up == 1) {
-        if (!SHUTTERUP) {
-            while (!SHUTTERUP && stepShutter(up) == 1) {
+        if (!SHUTTER_UP) {
+            while (!SHUTTER_UP && stepShutter(up) == 1) {
                 wait500Mycros();
             }
             ENGINE = 0;
             return;
         }
     } else {
-        if (!SHUTTERDOWN) {
-            while (!SHUTTERDOWN && stepShutter(up) == 1) {
+        if (!SHUTTER_DOWN) {
+            while (!SHUTTER_DOWN && stepShutter(up) == 1) {
                 wait500Mycros();
             }
             ENGINE = 0;
@@ -216,25 +216,25 @@ void main() {
         updateLights();
         updateDisplay();
         //Naechster Raum
-        if (!NEXTROOM) {
+        if (!NEXT_ROOM) {
             decrementRoom();
-            while (!NEXTROOM) continue;
+            while (!NEXT_ROOM) continue;
         //Vorheriger Raum
-        } else if (!PREVROOM) {
+        } else if (!PREV_ROOM) {
             incrementRoom();
-            while (!PREVROOM) continue;
+            while (!PREV_ROOM) continue;
         //Automatikmodus
-        } else if (!AUTOMODE) {
+        } else if (!AUTO_MODE) {
             setLight(2, room);
-            while (!AUTOMODE) continue;
+            while (!AUTO_MODE) continue;
         //Rolladen Hoch
-        } else if (!SHUTTERUP) {
+        } else if (!SHUTTER_UP) {
             moveShutter(1);
-            while (!SHUTTERUP) continue;
+            while (!SHUTTER_UP) continue;
         //Rolladen Herunter
-        } else if (!SHUTTERDOWN) {
+        } else if (!SHUTTER_DOWN) {
             moveShutter(0);
-            while (!SHUTTERDOWN) continue;
+            while (!SHUTTER_DOWN) continue;
         }
     }
 }
