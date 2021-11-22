@@ -39,16 +39,16 @@ sbit SEG1 = 0xA5; //Port 2.5
 char lightStatus[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 //Status des Rolladens
-char shutterStatus = 0;
+int shutterStatus = 0;
 
 //Zaehlt von 0 bis 7 fuer den Index von engine[]
 char shutterIndex = 0;
 
 //Enthaelt die Zustände für den Schrittmotor
-int engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b00000100, 0b00001100, 0b00001000, 0b00001001};
+char engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b00000100, 0b00001100, 0b00001000, 0b00001001};
 
-int SHUTTERSTATUSMIN = 0;
-int SHUTTERSTATUSMAX = 1000;
+char SHUTTERSTATUSMIN = 0;
+int SHUTTERSTATUSMAX = 2048;
 
 //Status der automatischen Steuerung
 //0=Aus; 1=An
@@ -90,24 +90,25 @@ void initialize() {
     SEG0 = 1; //Setzt die Anzeige aus Segment0
     SEG1 = 0; //Setzt die Anzeige aus Segment0
     TMOD = 0b00000001; //Timer0 16-Bit
+    ENGINE = 0; //Schaltet Motor aus
 }
 
-//Wartet 50 Millisekunden
-void wait50Millis() {
-    TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
-    TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+//Wartet 10 Millisekunden
+void wait10Millis() {
+    TH0 = 0xFC; //65536µs – 65526µs = 10µs = FDF7 in hex (Ein Durchgang ist 10ms lang)
+    TL0 = 0x18; //65536µs – 65526µs = 10µs = FDF7 in hex (Ein Durchgang ist 10ms lang)
     TR0 = 1; //Timer starten
     while (!TF0) continue;
     TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
     TR0 = 0; //Timer stoppen
 }
 
-//Wartet 2 Sekunden
-void wait2Secs() {
+//Wartet 1 Sekunde
+void wait1Sec() {
     TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
     TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
     TR0 = 1; //Timer starten
-    for (i = 0; i < 40; i++) { //40 Durchgänge, da 40 * 50ms = 2000ms = 2s
+    for (i = 0; i < 20; i++) { //40 Durchgänge, da 40 * 50ms = 2000ms = 2s
         while (!TF0) continue; //Warten, bis ein Durchgang fertig ist
         TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
         TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
@@ -123,7 +124,6 @@ void incrementRoom() {
         room++;
     }
     updateLights();
-    
 }
 
 //Ueperbrueft ob ein weiterer Raum zur Verfuegung steht, wechselt auf den
@@ -152,8 +152,8 @@ void setLight(char status, char room) {
 //return: Gibt an, ob sich der Motor weiter bewegen lässt 0=Nein; 1=Ja
 int stepShutter(char up) {
     if (up == 1) {
-        if (shutterStatus < SHUTTERSTATUSMAX) {
-            if (shutterIndex < 7) {
+        if (shutterStatus < (SHUTTERSTATUSMAX * 4)) {
+            if (shutterIndex < 8) {
                 shutterIndex++;
             } else {
                 shutterIndex = 0;
@@ -168,7 +168,7 @@ int stepShutter(char up) {
             if (shutterIndex > 0) {
                 shutterIndex--;
             } else {
-                shutterIndex = 7;
+                shutterIndex = 8;
             }
             ENGINE = engine[shutterIndex];
             shutterStatus--;
@@ -182,25 +182,28 @@ int stepShutter(char up) {
 //Bewegt den Schrittmotor auf die gewuenschte Position
 //up: 0=Herunter; 1=Hoch
 void moveShutter(char up) {
-    wait2Secs();
+    wait1Sec();
     if (SHUTTERUP && SHUTTERDOWN) {
         while(SHUTTERDOWN && SHUTTERUP && stepShutter(up) == 1) {
-            wait50Millis();
+            wait10Millis();
         }
+        ENGINE = 0;
         return;
     }
     if (up == 1) {
         if (!SHUTTERUP) {
             while (!SHUTTERUP && stepShutter(up) == 1) {
-                wait50Millis();
+                wait10Millis();
             }
+            ENGINE = 0;
             return;
         }
     } else {
         if (!SHUTTERDOWN) {
             while (!SHUTTERDOWN && stepShutter(up) == 1) {
-                wait50Millis();
+                wait10Millis();
             }
+            ENGINE = 0;
             return;
         }
     }
@@ -227,9 +230,11 @@ void main() {
         //Rolladen Hoch
         } else if (!SHUTTERUP) {
             moveShutter(1);
+            while (!SHUTTERUP) continue;
         //Rolladen Herunter
         } else if (!SHUTTERDOWN) {
             moveShutter(0);
+            while (!SHUTTERDOWN) continue;
         }
     }
 }
