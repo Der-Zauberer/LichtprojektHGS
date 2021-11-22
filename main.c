@@ -94,21 +94,21 @@ void initialize() {
 }
 
 //Wartet 10 Millisekunden
-void wait10Millis() {
-    TH0 = 0xFC; //65536µs – 65526µs = 10µs = FDF7 in hex (Ein Durchgang ist 10ms lang)
-    TL0 = 0x18; //65536µs – 65526µs = 10µs = FDF7 in hex (Ein Durchgang ist 10ms lang)
+void wait500Mycros() {
+    TH0 = 0xFC; //65536µs – 65026µs = 500µs = FC18 in hex (Ein Durchgang ist 500µs lang)
+    TL0 = 0x18; //65536µs – 65026µs = 500µs = FC18 in hex (Ein Durchgang ist 500µs lang)
     TR0 = 1; //Timer starten
     while (!TF0) continue;
     TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
     TR0 = 0; //Timer stoppen
 }
 
-//Wartet 1 Sekunde
-void wait1Sec() {
+//Wartet 500 Millisekunden
+void wait500Millis() {
     TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
     TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
     TR0 = 1; //Timer starten
-    for (i = 0; i < 20; i++) { //40 Durchgänge, da 40 * 50ms = 2000ms = 2s
+    for (i = 0; i < 10; i++) { //40 Durchgänge, da 40 * 50ms = 2000ms = 2s
         while (!TF0) continue; //Warten, bis ein Durchgang fertig ist
         TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
         TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
@@ -182,10 +182,10 @@ int stepShutter(char up) {
 //Bewegt den Schrittmotor auf die gewuenschte Position
 //up: 0=Herunter; 1=Hoch
 void moveShutter(char up) {
-    wait1Sec();
+    wait500Millis();
     if (SHUTTERUP && SHUTTERDOWN) {
         while(SHUTTERDOWN && SHUTTERUP && stepShutter(up) == 1) {
-            wait10Millis();
+            wait500Mycros();
         }
         ENGINE = 0;
         return;
@@ -193,7 +193,7 @@ void moveShutter(char up) {
     if (up == 1) {
         if (!SHUTTERUP) {
             while (!SHUTTERUP && stepShutter(up) == 1) {
-                wait10Millis();
+                wait500Mycros();
             }
             ENGINE = 0;
             return;
@@ -201,7 +201,7 @@ void moveShutter(char up) {
     } else {
         if (!SHUTTERDOWN) {
             while (!SHUTTERDOWN && stepShutter(up) == 1) {
-                wait10Millis();
+                wait500Mycros();
             }
             ENGINE = 0;
             return;
