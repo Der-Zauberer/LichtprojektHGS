@@ -7,7 +7,6 @@
 
 sbit PREV_ROOM = 0x80; //Vorheriger Raum P0.0
 sbit TOGGLE_LIGHT = 0x81; //Licht toggeln P0.1
-sbit AUTO_MODE = 0x82; //Automatikmodius toggeln P0.2
 sbit NEXT_ROOM = 0x83; //Naechster Raum P0.3
 
 sbit SHUTTER_UP = 0xA0; //Rolladen hoch P2.0
@@ -219,10 +218,6 @@ void main() {
         } else if (!PREV_ROOM) {
             incrementRoom();
             while (!PREV_ROOM) continue;
-        //Automatikmodus
-        } else if (!AUTO_MODE) {
-            setLight(2, room);
-            while (!AUTO_MODE) continue;
         //Rolladen Hoch
         } else if (!SHUTTER_UP) {
             moveShutter(1);
