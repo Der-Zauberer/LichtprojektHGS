@@ -50,10 +50,6 @@ unsigned char engine[] = {0b00000001, 0b00000011, 0b00000010, 0b00000110 ,0b0000
 char SHUTTER_STATUS_MIN = 0;
 int SHUTTER_STATUS_MAX = 2048;
 
-//Status der automatischen Steuerung
-//0=Aus; 1=An
-char autoStatus = 0;
-
 //Enthält die Zustaende für die Sieben-Segment-Anzeige
 unsigned char segmentDigit[] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
 
