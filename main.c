@@ -218,6 +218,10 @@ void main() {
         } else if (!PREV_ROOM) {
             incrementRoom();
             while (!PREV_ROOM) continue;
+		//Licht an oder Aus
+		} else if (!TOGGLE_LIGHT) {
+			setLight(2, room);
+			while (!TOGGLE_LIGHT) continue;
         //Rolladen Hoch
         } else if (!SHUTTER_UP) {
             moveShutter(1);
