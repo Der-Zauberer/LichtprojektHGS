@@ -7,6 +7,7 @@
 
 sbit PREV_ROOM = 0x80; //Vorheriger Raum P0.0
 sbit TOGGLE_LIGHT = 0x81; //Licht toggeln P0.1
+sbit CRISTMASLIGHT = 0x82; // Weihnachtsbeleuchtung toggeln P0.2
 sbit NEXT_ROOM = 0x83; //Naechster Raum P0.3
 
 sbit SHUTTER_UP = 0xA0; //Rolladen hoch P2.0
@@ -52,9 +53,22 @@ int SHUTTER_STATUS_MAX = 2048;
 //Enthält die Zustaende für die Sieben-Segment-Anzeige
 unsigned char segmentDigit[] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
 
+//Enthält die Zustaende für die wihnachstbeleuchtung
+unsigned char christmasLightState[] = {0b10101010, 0b00000000, 0b01010101, 0b00000000};
+
+//Zählt die Interrupt-Service-Routinen
+unsigned int interruptCounter = 0;
+
 //Zeigt auf welchen Raum gerade Zugegriffen wird
 //Es gibt Raum 0 bis 8
 char room = 0;
+
+//Gibt an ob die Weihnachtsbeleuchtung eingeschaltet ist
+//0=Aus, 1=An
+char christmasLight = 0;
+
+//Zaehlt den Animationsfortschritt fuer die Weihnachtsbeleuchtung an
+unsigned int christmasLightCounter = 0;
 
 //------------------//
 //--- Funktionen ---//
@@ -62,16 +76,37 @@ char room = 0;
 
 int i = 0;
 
+//Timer Interrupt für die Weihnachtsbeleuchtung
+void timerInterrupt() interrupt 3 {
+    if (interruptCounter < 1) {
+        interruptCounter++;
+    } else {
+        interruptCounter = 0;
+        if (christmasLightCounter < 4) {
+            christmasLightCounter++;
+        } else {
+            christmasLightCounter = 0;
+        }
+    }
+    TF0 = 0; //Ueberlaufbit für erneute Ueberprüfung auf 0 setzen
+    TH0 = 0x3C; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+    TL0 = 0xB0; //65536µs – 15536µs = 50000µs = 3CB0 in hex (Ein Durchgang ist 50ms lang)
+}
+
 //Aktualisiert die LED Anzeige fuer die Lichter
 void updateLights() {
-    LED0 = lightStatus[7];
-    LED1 = lightStatus[6];
-    LED2 = lightStatus[5];
-    LED3 = lightStatus[4];
-    LED4 = lightStatus[3];
-    LED5 = lightStatus[2];
-    LED6 = lightStatus[1];
-    LED7 = lightStatus[0];
+    if (!christmasLight) {
+        LED0 = lightStatus[7];
+        LED1 = lightStatus[6];
+        LED2 = lightStatus[5];
+        LED3 = lightStatus[4];
+        LED4 = lightStatus[3];
+        LED5 = lightStatus[2];
+        LED6 = lightStatus[1];
+        LED7 = lightStatus[0];
+    } else {
+        LED = christmasLightState[christmasLightCounter];
+    }
 }
 
 //Aktualisiert die 7-Segment Anzeige
@@ -84,7 +119,8 @@ void initialize() {
     Grundeinstellungen();
     SEG0 = 1; //Setzt die Anzeige aus Segment0
     SEG1 = 0; //Setzt die Anzeige aus Segment0
-    TMOD = 0b00000001; //Timer0 16-Bit
+    TMOD = 0b00010001; //Timer0 16-Bit und Timer1 16-Bit
+    IE = 0b10001000; //Interrupt Timer1
     ENGINE = 0; //Schaltet Motor aus
 }
 
@@ -218,10 +254,19 @@ void main() {
         } else if (!PREV_ROOM) {
             incrementRoom();
             while (!PREV_ROOM) continue;
-		//Licht an oder Aus
-		} else if (!TOGGLE_LIGHT) {
-			setLight(2, room);
-			while (!TOGGLE_LIGHT) continue;
+	//Licht Anschalten oder Ausschalten
+	} else if (!TOGGLE_LIGHT) {
+	    setLight(2, room);
+	    while (!TOGGLE_LIGHT) continue;
+        //Weihnachstbeleuchtung Anschanlten oder Ausschalten
+        } else if (!CRISTMASLIGHT) {
+            if (christmasLight) {
+                TR1 = 0;
+            } else {
+                TR1 = 1;
+            }
+            christmasLight = !christmasLight;
+            while (!CRISTMASLIGHT) continue;
         //Rolladen Hoch
         } else if (!SHUTTER_UP) {
             moveShutter(1);
