@@ -53,10 +53,10 @@ int SHUTTER_STATUS_MAX = 2048;
 //Enthält die Zustaende für die Sieben-Segment-Anzeige
 unsigned char segmentDigit[] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110, 0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111};
 
-//Enthält die Zustaende für die wihnachstbeleuchtung
+//Enthaelt die Zustaende für die Weihnachtsbeleuchtung
 unsigned char christmasLightState[] = {0b10101010, 0b00000000, 0b01010101, 0b00000000};
 
-//Zählt die Interrupt-Service-Routinen
+//Zaehlt die Interrupt-Service-Routinen
 unsigned int interruptCounter = 0;
 
 //Zeigt auf welchen Raum gerade Zugegriffen wird
@@ -76,7 +76,7 @@ unsigned int christmasLightCounter = 0;
 
 int i = 0;
 
-//Timer Interrupt für die Weihnachtsbeleuchtung
+//Timer-Interrupt für die Weihnachtsbeleuchtung
 void timerInterrupt() interrupt 3 {
     if (interruptCounter < 1) {
         interruptCounter++;
@@ -124,7 +124,7 @@ void initialize() {
     ENGINE = 0; //Schaltet Motor aus
 }
 
-//Wartet 10 Millisekunden
+//Wartet 500 Millisekunden
 void wait500Mycros() {
     TH0 = 0xFC; //65536µs – 65026µs = 500µs = FC18 in hex (Ein Durchgang ist 500µs lang)
     TL0 = 0x18; //65536µs – 65026µs = 500µs = FC18 in hex (Ein Durchgang ist 500µs lang)
